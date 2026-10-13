@@ -127,23 +127,49 @@ ksql -h 127.0.0.1 -p 54321 -U nacos -d nacos -W -v ON_ERROR_STOP=1 -f nacos-king
 
 ### 4.4、配置 Nacos
 
-修改 Nacos 的 `conf/application.properties`：
+将以下配置复制到 Nacos 2.3.0 安装目录下的 `conf/application.properties`，替换该文件原有的数据库连接配置。适用于 KingbaseES V008R006C008B0020 的 PG 兼容模式。
+
+示例连接本机 `127.0.0.1:54321`，数据库名为 `nacos`，数据库用户为 `nacos`，模式为 `public`。部署时替换为实际环境的地址、端口、库名、模式、用户名和密码。
 
 ```properties
+# 数据源标识，必须与金仓插件注册的 kingbase 一致
 spring.sql.init.platform=kingbase
-# 兼容旧配置名称，两个平台配置应保持一致
+# 兼容旧配置名称；已有此项时也设置为 kingbase
 spring.datasource.platform=kingbase
 
+# 数据源数量；一个数据库连接使用 1，配置编号从 0 开始
 db.num=1
-db.url.0=jdbc:kingbase8://127.0.0.1:54321/nacos?currentSchema=public&tcpKeepAlive=true&ApplicationName=nacos_java
-db.user.0=nacos
-db.password.0=替换为数据库用户密码
 
+# 金仓 JDBC 地址；currentSchema 对应初始化 SQL 所在模式
+db.url.0=jdbc:kingbase8://127.0.0.1:54321/nacos?currentSchema=public&tcpKeepAlive=true&ApplicationName=nacos_java
+
+# 数据库账号，密码替换为实际值
+db.user.0=nacos
+db.password.0=CHANGE_ME
+
+# 金仓 JDBC 驱动与连接检测 SQL
 db.pool.config.driverClassName=com.kingbase8.Driver
 db.pool.config.connectionTestQuery=SELECT 1
 ```
 
-将地址、端口、库名、模式和用户替换为实际值。`spring.sql.init.platform` 是 Nacos 2.3.0 优先读取的配置；`spring.datasource.platform` 是旧名称，已有旧配置时也要同步修改。导入完成并放置插件 JAR 后，按原部署方式重启 Nacos。
+需要显式配置连接池时，可在同一文件追加以下示例，连接数按实际负载调整，超时单位为毫秒：
+
+```properties
+db.pool.config.maximumPoolSize=20
+db.pool.config.minimumIdle=2
+db.pool.config.connectionTimeout=30000
+db.pool.config.validationTimeout=5000
+```
+
+`spring.sql.init.platform` 是 Nacos 2.3.0 优先读取的配置；`spring.datasource.platform` 是旧名称，两个配置应保持一致。`db.user.0`、`db.password.0` 与 `db.url.0` 对应同一个数据源。
+
+启用配置时依次完成：
+
+1. 将金仓独立插件 JAR 或汇总插件 JAR 放入 Nacos 安装目录的 `plugins/`。
+2. 使用上述数据库账号，在 `currentSchema` 指定的模式下导入 `nacos-kingbase.sql`，确认 PG 模式保留空字符串。
+3. 保存 `conf/application.properties` 后重启 Nacos；使用标准启动脚本单机启动时执行 `sh bin/startup.sh -m standalone`，集群部署按原有启动方式启动。
+
+配置读取及连接池参数可核对 [Nacos 2.3.0 数据源源码](https://github.com/alibaba/nacos/blob/2.3.0/persistence/src/main/java/com/alibaba/nacos/persistence/datasource/ExternalDataSourceProperties.java)和[连接池源码](https://github.com/alibaba/nacos/blob/2.3.0/persistence/src/main/java/com/alibaba/nacos/persistence/datasource/DataSourcePoolProperties.java)。
 
 ### 4.5、验证范围
 
