@@ -26,3 +26,6 @@ replay_pid*
 # Maven build output
 target/
 .flattened-pom.xml
+
+# Deployable plugin JARs published with the source
+!/dist/*.jar

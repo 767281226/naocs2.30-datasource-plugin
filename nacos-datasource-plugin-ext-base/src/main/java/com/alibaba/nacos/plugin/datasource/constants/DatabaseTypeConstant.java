@@ -24,6 +24,8 @@ package com.alibaba.nacos.plugin.datasource.constants;
 public class DatabaseTypeConstant {
     
     public static final String POSTGRESQL = "postgresql";
+
+    public static final String KINGBASE = "kingbase";
     
     public static final String MYSQL = "mysql";
     
